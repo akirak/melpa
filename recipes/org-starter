@@ -1,8 +1,5 @@
-(org-starter :repo "akirak/org-starter"
-             :fetcher github
-             :files
-             ("org-starter.el" "org-starter-*.el"
-              "doc/dir" "doc/*.info" "doc/*.texi" "doc/*.texinfo"
-              (:exclude ".dir-locals.el" "test.el" "tests.el" "*-test.el" "*-tests.el"
-                        "org-starter-swiper.el"
-                        "org-starter-extras.el")))
+(org-starter
+ :repo "akirak/org-starter"
+ :fetcher github
+ :files (:defaults
+         (:exclude "org-starter-swiper.el" "org-starter-extras.el")))
