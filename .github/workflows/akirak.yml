@@ -17,8 +17,6 @@ jobs:
       run: nix-env -iA cachix -f https://cachix.org/api/v1/install
     - name: enable cachix for emacs-ci
       run: cachix use emacs-ci
-    - name: check if nix is installed
-      run: nix-env --version
     - uses: actions/checkout@v2
     - name: install elinter
       run: nix-env -if https://github.com/akirak/elinter/archive/v4.tar.gz -A main
