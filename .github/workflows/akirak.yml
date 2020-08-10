@@ -20,8 +20,6 @@ jobs:
     - name: check if nix is installed
       run: nix-env --version
     - uses: actions/checkout@v2
-    - name: Display environment variables
-      run: env
     - name: install elinter
       run: nix-env -if https://github.com/akirak/elinter/archive/v4.tar.gz -A main
     - run: 'git grep --cached akirak recipes | cut -d: -f1 | xargs elinter -r -e latest'
