@@ -3,6 +3,6 @@
  :repo "vedang/pdf-tools"
  :files ("lisp/*.el"
          "README"
-         ("build" "Makefile")
-         ("build" "server")
+;         ("build" "Makefile")
+;         ("build" "server")
          (:exclude "lisp/tablist.el" "lisp/tablist-filter.el")))
