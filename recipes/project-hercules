@@ -1,0 +1,1 @@
+(project-hercules :fetcher github :repo "akirak/project-hercules.el")
