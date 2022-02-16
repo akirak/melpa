@@ -1,2 +1,1 @@
-(ghelp :fetcher github :repo "casouri/ghelp"
-       :files (:defaults (:exclude "ghelp-*.el") "ghelp-builtin.el"))
+(ghelp :fetcher github :repo "casouri/ghelp")
