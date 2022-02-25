@@ -1,0 +1,1 @@
+(notebook :fetcher github :repo "rougier/notebook-mode")
