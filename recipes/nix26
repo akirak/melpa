@@ -1,0 +1,3 @@
+(nix26 :fetcher github :repo "emacs-twist/nix26.el"
+       :files (:defaults (:exclude "magit-nix26-flake.el"
+                                   "nix26-embark.el")))
