@@ -1,0 +1,1 @@
+(org-linker-edna :repo "toshism/org-linker-edna" :fetcher github)
