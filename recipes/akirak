@@ -1,1 +1,2 @@
-(akirak :fetcher git :url "https://git.sr.ht/~akirak/akirak-mode")
+(akirak :fetcher sourcehut :repo "akirak/nix-config"
+        :files ("emacs/lisp/*.el"))
