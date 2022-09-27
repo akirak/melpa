@@ -1,1 +1,2 @@
-(akirak :fetcher sourcehut :repo "akirak/akirak-mode")
+(akirak :fetcher sourcehut :repo "akirak/nix-config"
+        :files ("emacs/lisp/*.el"))
