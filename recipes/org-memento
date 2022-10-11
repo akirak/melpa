@@ -1,1 +1,2 @@
-(org-memento :fetcher sourcehut :repo "akirak/org-memento")
+(org-memento :fetcher sourcehut :repo "akirak/org-memento"
+             :files (:defaults (:exclude "org-memento-timeline.el")))
