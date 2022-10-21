@@ -1,2 +1,3 @@
 (org-memento-timeline :fetcher sourcehut :repo "akirak/org-memento"
-                      :files ("org-memento-timeline.el"))
+                      :files ("org-memento-timeline.el"
+                              "org-memento-group.el"))
