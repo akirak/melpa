@@ -1,3 +1,4 @@
 (org-memento :fetcher sourcehut :repo "akirak/org-memento"
              :files (:defaults (:exclude "org-memento-timeline.el"
+                                         "org-memento-planner.el"
                                          "org-memento-group.el")))
