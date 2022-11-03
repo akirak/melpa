@@ -1,1 +1,1 @@
-(org-memento :fetcher sourcehut :repo "akirak/org-memento")
+(org-memento :fetcher github :repo "akirak/org-memento")
