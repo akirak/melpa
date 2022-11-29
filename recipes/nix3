@@ -1,3 +1,1 @@
-(nix3 :fetcher github :repo "emacs-twist/nix3.el"
-      :files (:defaults (:exclude "magit-nix3.el"
-                                  "nix3-embark.el")))
+(nix3 :fetcher github :repo "emacs-twist/nix3.el")
