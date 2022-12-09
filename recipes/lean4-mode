@@ -1,0 +1,1 @@
+(lean4-mode :fetcher github :repo "leanprover/lean4-mode")
