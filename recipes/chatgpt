@@ -1,0 +1,1 @@
+(chatgpt :fetcher github :repo "joshcho/ChatGPT.el")
