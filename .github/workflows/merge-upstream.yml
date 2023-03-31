@@ -1,0 +1,21 @@
+name: Merge upstream
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 18 * * 3'
+
+jobs:
+  job:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: akirak
+    - run: |
+        git config --add user.name 'github-actions[bot]'
+        git config --add user.email '6270544+github-actions[bot]@users.noreply.github.com'
+        git remote add melpa https://github.com/melpa/melpa.git
+        git fetch melpa
+        git merge --no-ff --no-edit -Xours --allow-unrelated-histories melpa/master
+        git push origin HEAD
