@@ -1,7 +1,3 @@
 (pdf-tools
- :fetcher github
- :repo "vedang/pdf-tools"
- :files (:defaults
-         "README"
-         ("build" "Makefile")
-         ("build" "server")))
+ :repo "vedang/pdf-tools" :fetcher github
+ :files (:defaults "Makefile" "lisp" "server"))
