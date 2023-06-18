@@ -1,1 +1,2 @@
-(flymake-bean-check :fetcher github :repo "akirak/flymake-bean-check")
+(flymake-bean-check :fetcher github :repo "beancount-beancount-mode"
+                    :files ("flymake-bean-check.el"))
