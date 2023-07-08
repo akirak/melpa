@@ -21,6 +21,8 @@ jobs:
         git fetch upstream
         git switch -C upstream-recipes upstream/master
 
+    - run: git merge-base --octopus HEAD akirak
+
     - name: Install Nix for installing git-filter-repo
       uses: cachix/install-nix-action@v22
       with:
