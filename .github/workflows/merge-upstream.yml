@@ -1,4 +1,4 @@
-name: Merge upstream
+name: Merge the upstream
 
 on:
   workflow_dispatch:
@@ -8,14 +8,45 @@ on:
 jobs:
   job:
     runs-on: ubuntu-latest
+
     steps:
+
     - uses: actions/checkout@v3
       with:
         ref: akirak
-    - run: |
-        git config --add user.name 'github-actions[bot]'
-        git config --add user.email '6270544+github-actions[bot]@users.noreply.github.com'
-        git remote add melpa https://github.com/melpa/melpa.git
-        git fetch melpa
-        git merge --no-ff --no-edit -Xours --allow-unrelated-histories melpa/master
-        git push origin HEAD
+
+    - name: Check out a new branch on the upstream master
+      run: |
+        git remote add upstream https://github.com/melpa/melpa.git
+        git fetch upstream
+        git switch -C upstream-recipes upstream/master
+
+    - name: Install Nix for installing git-filter-repo
+      uses: cachix/install-nix-action@v22
+      with:
+        nix_path: nixpkgs=channel:nixos-unstable
+
+    - name: Install git-filter-repo
+      run: nix profile install nixpkgs#git-filter-repo
+
+    - name: Get the base commit
+      id: merge-base
+      run: |
+        base=$(git merge-base upstream/master origin/akirak)
+        echo "BASE_COMMIT=$base" >> "$GITHUB_OUTPUT"
+
+    - name: Rewrite the history
+      run: |
+        git filter-repo --path recipes/ \
+          --refs "${{ steps.merge-base.outputs.BASE_COMMIT }}..HEAD"
+
+    - name: Rebase
+      run: git rebase akirak
+
+    - name: Create a pull request
+      uses: peter-evans/create-pull-request@v5
+      with:
+        base: akirak
+        token: ${{ secrets.PAT_FOR_PR }}
+        title: 'Merge the upstream recipe commits'
+        labels: automation
