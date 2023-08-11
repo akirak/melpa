@@ -23,8 +23,9 @@ jobs:
         git remote add upstream https://github.com/melpa/melpa.git
         git fetch upstream
 
-    - name: Install Nix
-      uses: cachix/install-nix-action@v22
+    - uses: DeterminateSystems/nix-installer-action@v4
+      with:
+        diagnostic-endpoint: ''
 
     - name: Merge upstream recipes
       run: |
