@@ -3,7 +3,7 @@ name: Merge the upstream
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 18 * * 3'
+    - cron: '0 8 * * 5'
 
 jobs:
   job:
