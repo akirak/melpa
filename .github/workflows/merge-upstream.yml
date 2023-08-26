@@ -23,7 +23,7 @@ jobs:
     - name: Fetch the upstream
       run: |
         git remote add upstream https://github.com/melpa/melpa.git
-        git fetch upstream
+        git fetch upstream master
 
     - uses: DeterminateSystems/nix-installer-action@v4
       with:
