@@ -30,7 +30,12 @@ jobs:
         diagnostic-endpoint: ''
 
     - name: Merge upstream recipes
-      run: nix run .#update-recipes --no-write-lock-file -- upstream/master
+      run: |
+        # Set some identity. Actually it will be overridden later, so it's
+        # unused
+        git config --add user.name 'github-actions[bot]'
+        git config --add user.email '6270544+github-actions[bot]@users.noreply.github.com'
+        nix run .#update-recipes --no-write-lock-file -- upstream/master
 
     - name: Create a pull request
       uses: peter-evans/create-pull-request@v5
