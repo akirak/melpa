@@ -38,4 +38,5 @@ jobs:
         base: akirak
         token: ${{ secrets.PAT_FOR_PR }}
         title: 'Merge the upstream recipe commits'
+        branch: create-pull-request/merge-recipes
         labels: automation
