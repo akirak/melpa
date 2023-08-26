@@ -30,9 +30,7 @@ jobs:
         diagnostic-endpoint: ''
 
     - name: Merge upstream recipes
-      run: |
-        nix run github:emacs-twist/recipes-updater --no-write-lock-file \
-            -- upstream/master
+      run: nix run .#update-recipes --no-write-lock-file -- upstream/master
 
     - name: Create a pull request
       uses: peter-evans/create-pull-request@v5
