@@ -1,4 +1,4 @@
-name: Merge the upstream
+name: Merge upstream recipes
 
 on:
   workflow_dispatch:
@@ -6,36 +6,81 @@ on:
     - cron: '0 8 * * 5'
 
 jobs:
-  job:
+  push:
     runs-on: ubuntu-latest
 
     steps:
 
     - uses: actions/checkout@v3
       with:
+        fetch-depth: 0
+        sparse-checkout: '.'
         ref: akirak
 
     - name: Switch to a work branch
-      run: git switch -C upstream-recipes
+      id: start
+      run: |
+        echo "rev=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
     - name: Fetch the upstream
+      id: upstream
       run: |
         git remote add upstream https://github.com/melpa/melpa.git
-        git fetch upstream
+        git fetch upstream master
+        echo "ref=upstream/master" >> "$GITHUB_OUTPUT"
 
     - uses: DeterminateSystems/nix-installer-action@v4
       with:
         diagnostic-endpoint: ''
 
-    - name: Merge upstream recipes
+    - name: Configure the Git identity
       run: |
-        nix run github:emacs-twist/recipes-updater --no-write-lock-file \
-            -- upstream/master
+        # Set some identity. Actually it will be overridden later by git-filter-repo,
+        # so it can be anything
+        git config --add user.name 'github-actions[bot]'
+        git config --add user.email '6270544+github-actions[bot]@users.noreply.github.com'
+
+    - name: Retrieve the merge base
+      id: merge-base
+      run: |
+        rev=$(git merge-base ${{ steps.upstream.outputs.ref }} ${{ steps.start.outputs.rev }})
+        echo "rev=$rev" > "$GITHUB_OUTPUT"
+
+    - name: Filter commits
+      run: |
+        git switch -C upstream-recipes ${{ steps.upstream.outputs.ref }}
+        nix run nixpkgs#git-filter-repo -- \
+          --path recipes/ --refs "${{ steps.merge-base.outputs.rev }}..HEAD" \
+          --commit-callback '
+            commit.committer_name = commit.author_name
+            commit.committer_email = commit.author_email
+            commit.committer_date = commit.author_date
+          ' --force
+
+    - name: Rebase
+      run: |
+        git rebase -s ort -X ours ${{ steps.start.outputs.rev }}
+
+    - run: git push --force-with-lease origin HEAD
+
+  pr:
+    runs-on: ubuntu-latest
+
+    needs:
+    - push
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        ref: akirak
+
+    - run: git merge --ff origin/upstream-recipes
 
     - name: Create a pull request
       uses: peter-evans/create-pull-request@v5
       with:
-        base: akirak
+        branch: create-pull-request/recipes
         token: ${{ secrets.PAT_FOR_PR }}
-        title: 'Merge the upstream recipe commits'
+        title: 'Merge upstream recipe commits'
         labels: automation
