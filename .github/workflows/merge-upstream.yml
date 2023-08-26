@@ -6,7 +6,7 @@ on:
     - cron: '0 8 * * 5'
 
 jobs:
-  job:
+  create-pr:
     runs-on: ubuntu-latest
 
     steps:
