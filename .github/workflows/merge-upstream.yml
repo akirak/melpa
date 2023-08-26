@@ -3,7 +3,7 @@ name: Merge the upstream
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 18 * * 3'
+    - cron: '0 8 * * 5'
 
 jobs:
   job:
@@ -15,35 +15,22 @@ jobs:
       with:
         ref: akirak
 
-    - name: Check out a new branch on the upstream master
+    - name: Switch to a work branch
+      run: git switch -C upstream-recipes
+
+    - name: Fetch the upstream
       run: |
         git remote add upstream https://github.com/melpa/melpa.git
         git fetch upstream
-        git switch -C upstream-recipes upstream/master
 
-    - run: git merge-base --octopus HEAD akirak
-
-    - name: Install Nix for installing git-filter-repo
-      uses: cachix/install-nix-action@v22
+    - uses: DeterminateSystems/nix-installer-action@v4
       with:
-        nix_path: nixpkgs=channel:nixos-unstable
+        diagnostic-endpoint: ''
 
-    - name: Install git-filter-repo
-      run: nix profile install nixpkgs#git-filter-repo
-
-    - name: Get the base commit
-      id: merge-base
+    - name: Merge upstream recipes
       run: |
-        base=$(git merge-base upstream/master origin/akirak)
-        echo "BASE_COMMIT=$base" >> "$GITHUB_OUTPUT"
-
-    - name: Rewrite the history
-      run: |
-        git filter-repo --path recipes/ \
-          --refs "${{ steps.merge-base.outputs.BASE_COMMIT }}..HEAD"
-
-    - name: Rebase
-      run: git rebase akirak
+        nix run github:emacs-twist/recipes-updater --no-write-lock-file \
+            -- upstream/master
 
     - name: Create a pull request
       uses: peter-evans/create-pull-request@v5
