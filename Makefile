@@ -1,5 +1,3 @@
-## Settings
-
 TOP := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
 -include ./config.mk
@@ -26,8 +24,7 @@ LISP_CONFIG ?= '(progn\
   (setq package-build-recipes-dir "$(TOP)/$(RCPDIR)/")\
   (setq package-build-stable $(STABLE))\
   (setq package-build-write-melpa-badge-images t)\
-  (setq package-build-timeout-secs \
-        (and (string= "linux" (symbol-name system-type)) 600)))'
+  (setq package-build-timeout-secs (when (string= "linux" (symbol-name system-type)) 600)))'
 
 LOAD_PATH ?= $(TOP)/package-build
 
@@ -39,20 +36,16 @@ $(addprefix -L ,$(LOAD_PATH)) \
 
 TIMEOUT := $(shell which timeout && echo "-k 60 600")
 
-## General rules
-
-.PHONY: clean build index html json sandbox
-.FORCE:
-
 all: packages packages/archive-contents json index
 
+## General rules
 html: index
 index: json
 	@echo " • Building html index ..."
 	$(MAKE) -C $(HTMLDIR)
 
-## Cleanup rules
 
+## Cleanup rules
 clean-working:
 	@echo " • Removing package sources ..."
 	@git clean -dffX $(WORKDIR)/.
@@ -68,14 +61,14 @@ clean-json:
 clean-sandbox:
 	@echo " • Removing sandbox files ..."
 	@if [ -d '$(SANDBOX)' ]; then \
-	  rm -rfv '$(SANDBOX)/elpa'; \
-	  rmdir '$(SANDBOX)'; \
+		rm -rfv '$(SANDBOX)/elpa'; \
+		rmdir '$(SANDBOX)'; \
 	fi
 
 pull-package-build:
 	git fetch package-build
 	git -c "commit.gpgSign=true" subtree merge \
-	-m "Merge Package-Build $$(git describe package-build/master)" \
+	-m "Merge Package-Build $(shell git describe package-build/master)" \
 	--squash -P package-build package-build/master
 
 add-package-build-remote:
@@ -89,15 +82,10 @@ packages/archive-contents: .FORCE
 	@echo " • Updating $@ ..."
 	@$(EVAL) '(package-build-dump-archive-contents)'
 
-packages-stable/archive-contents: .FORCE
-	@echo " • Updating $@ ..."
-	@$(EVAL) '(package-build-dump-archive-contents)'
-
 cleanup:
 	@$(EVAL) '(package-build-cleanup)'
 
 ## Json rules
-
 html/archive.json: $(PKGDIR)/archive-contents
 	@echo " • Building $@ ..."
 	@$(EVAL) '(package-build-archive-alist-as-json "html/archive.json")'
@@ -120,42 +108,35 @@ $(RCPDIR)/.dirstamp: .FORCE
 	@[[ ! -e $@ || "$$(find $(@D) -newer $@ -print -quit)" != "" ]] \
 	&& touch $@ || exit 0
 
-## Recipe rules
 
+## Recipe rules
 $(RCPDIR)/%: .FORCE
 	@echo " • Building package $(@F) ..."
 	@exec 2>&1; exec &> >(tee $(PKGDIR)/$(@F).log); \
 	  $(TIMEOUT) $(EVAL) "(package-build-archive \"$(@F)\")" \
 	  && echo " ✓ Success:" \
 	  && ls -lsh $(PKGDIR)/$(@F)-[0-9]*
-	@test $(SLEEP) -gt 0 && echo " Sleeping $(SLEEP) seconds ..." \
-	  && sleep $(SLEEP) || true
+	@test $(SLEEP) -gt 0 && echo " Sleeping $(SLEEP) seconds ..." && sleep $(SLEEP) || true
 	@echo
 
-## Sandbox
 
+## Sandbox
 sandbox: packages/archive-contents
 	@echo " • Building sandbox ..."
 	@mkdir -p $(SANDBOX)
 	@$(EMACS_COMMAND) -Q \
-	  --eval '(setq user-emacs-directory (file-truename "$(SANDBOX)"))' \
-	  --eval '(setq package-user-dir (locate-user-emacs-file "elpa"))' \
-	  -l package \
-	  --eval "(add-to-list 'package-archives \
-	            '(\"gnu\" . \"https://elpa.gnu.org/packages/\") t)" \
-	  --eval "(add-to-list 'package-archives \
-	            '(\"melpa\" . \"https://melpa.org/packages/\") t)" \
-	  --eval "(add-to-list 'package-archives \
-	            '(\"sandbox\" . \"$(TOP)/$(PKGDIR)/\") t)" \
-	  --eval "(package-refresh-contents)" \
-	  --eval "(package-initialize)" \
-	  --eval '(setq sandbox-install-package "$(INSTALL)")' \
-	  --eval "(unless (string= \"\" sandbox-install-package) \
-	            (package-install (intern sandbox-install-package)))" \
-	  --eval "(when (get-buffer \"*Compile-Log*\") \
-	            (display-buffer \"*Compile-Log*\"))"
+		--eval '(setq user-emacs-directory (file-truename "$(SANDBOX)"))' \
+		--eval '(setq package-user-dir (locate-user-emacs-file "elpa"))' \
+		-l package \
+		--eval "(add-to-list 'package-archives '(\"gnu\" . \"https://elpa.gnu.org/packages/\") t)" \
+		--eval "(add-to-list 'package-archives '(\"melpa\" . \"https://melpa.org/packages/\") t)" \
+		--eval "(add-to-list 'package-archives '(\"sandbox\" . \"$(TOP)/$(PKGDIR)/\") t)" \
+		--eval "(package-refresh-contents)" \
+		--eval "(package-initialize)" \
+		--eval '(setq sandbox-install-package "$(INSTALL)")' \
+		--eval "(unless (string= \"\" sandbox-install-package) (package-install (intern sandbox-install-package)))" \
+		--eval "(when (get-buffer \"*Compile-Log*\") (display-buffer \"*Compile-Log*\"))"
 
-# Local Variables:
-# outline-regexp: "#\\(#+\\)"
-# eval: (outline-minor-mode)
-# End:
+
+.PHONY: clean build index html json sandbox
+.FORCE:

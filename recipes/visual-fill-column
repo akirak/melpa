@@ -1,3 +1,7 @@
+;; Unfortunately, Nix currently doesn't support main as the default branch,
+;; so you have to define a recipe for every such a repository.
+;; In the future, this may be resolved in the upstream Nix, but I don't know.
 (visual-fill-column
  :fetcher codeberg
- :repo "joostkremers/visual-fill-column")
+ :repo "joostkremers/visual-fill-column"
+ :branch "main")

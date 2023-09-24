@@ -1,0 +1,41 @@
+name: Merge the upstream
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 8 * * 5'
+
+jobs:
+  job:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - uses: actions/checkout@v3
+      with:
+        ref: akirak
+
+    - name: Switch to a work branch
+      run: git switch -C upstream-recipes
+
+    - name: Fetch the upstream
+      run: |
+        git remote add upstream https://github.com/melpa/melpa.git
+        git fetch upstream
+
+    - uses: DeterminateSystems/nix-installer-action@v4
+      with:
+        diagnostic-endpoint: ''
+
+    - name: Merge upstream recipes
+      run: |
+        nix run github:emacs-twist/recipes-updater --no-write-lock-file \
+            -- upstream/master
+
+    - name: Create a pull request
+      uses: peter-evans/create-pull-request@v5
+      with:
+        base: akirak
+        token: ${{ secrets.PAT_FOR_PR }}
+        title: 'Merge the upstream recipe commits'
+        labels: automation

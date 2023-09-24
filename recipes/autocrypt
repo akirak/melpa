@@ -1,0 +1,1 @@
+(autocrypt :fetcher sourcehut :repo "pkal/autocrypt")

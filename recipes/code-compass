@@ -1,4 +1,2 @@
-(code-compass
- :fetcher github
- :repo "ag91/code-compass"
- :files (:defaults "scripts" "pages"))
+(code-compass :fetcher github
+          :repo "ag91/code-compass")

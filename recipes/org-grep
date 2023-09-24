@@ -1,1 +1,1 @@
-(org-grep :fetcher sourcehut :repo "minshall/org-grep")
+(org-grep :fetcher github :repo "emacsorphanage/org-grep")

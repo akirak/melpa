@@ -1,1 +1,1 @@
-(ghq :repo "lafrenierejm/emacs-ghq" :fetcher github)
+(ghq :repo "rcoedo/emacs-ghq" :fetcher github)

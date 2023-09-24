@@ -93,8 +93,8 @@
 
 (defcustom package-build-get-version-function
   (if package-build-stable
-      'package-build-tag-version
-    'package-build-timestamp-version)
+      'package-build-get-tag-version
+    'package-build-get-timestamp-version)
   "The function used to determine the commit and version of a package.
 
 The default depends on the value of option `package-build-stable'.
@@ -105,9 +105,7 @@ choosen by the function, TIME is its commit date, and VERSION is
 the version string choosen for COMMIT."
   :group 'package-build
   :set-after '(package-build-stable)
-  :type '(radio (function-item package-build-tag-version)
-                (function-item package-build-timestamp-version)
-                function))
+  :type 'function)
 
 (defcustom package-build-predicate-function nil
   "Predicate used by `package-build-all' to determine which packages to build.
@@ -171,39 +169,15 @@ similar, which will provide the GNU timeout program as
   "Type of `package-build-tar-executable'.
 Can be `gnu' or `bsd'; nil means the type is not decided yet.")
 
-(define-obsolete-variable-alias 'package-build-write-melpa-badge-images
-  'package-build-write-badge-images "Package-Build 5.0.0")
-
-(defcustom package-build-write-badge-images nil
-  "When non-nil, write badge images alongside packages.
-These badges can, for example, be used on GitHub pages."
+(defcustom package-build-write-melpa-badge-images nil
+  "When non-nil, write MELPA badge images alongside packages.
+These batches can, for example, be used on GitHub pages."
   :group 'package-build
   :type 'boolean)
 
-(defcustom package-build-badge-data
-  (if package-build-stable
-      (list "melpa stable" "#3e999f")
-    (list "melpa" "#922793"))
-  "Data used when generating badge images.
-The default value is set based on `package-build-stable'.
-`package-build-write-badge-images' controls whether images
-are generated."
-  :group 'package-build
-  :type '(list (string :tag "Archive name") color))
-
-(defcustom package-build-version-regexp "\\`[rRvV]?\\(?1:.+\\)\\'"
-  "Regexp used to match valid version-strings.
-
-The string matched by the first capture group must be valid
-according to `version-to-list'.  The optional part before the
-capture group should match prefixes commonly used when naming
-version tags.  It is not part of the version string as such
-and thus not passed to `version-to-list'.  Individual package
-recipes can override this using the `:version-regexp' property.
-
-To match only releases but no pre-releases, and to support only
-\".\" as separator, use \
-\"\\\\`[rRvV]?\\\\([0-9]+\\\\(\\\\.[0-9]+\\\\)\\\\)\\\\'\"."
+(defcustom package-build-version-regexp "^[rRvV]?\\(.*\\)$"
+  "Default pattern for matching valid version-strings within repository tags.
+The string in the capture group should be parsed as valid by `version-to-list'."
   :group 'package-build
   :type 'string)
 
@@ -275,13 +249,13 @@ Otherwise do nothing.  FORMAT-STRING and ARGS are as per that function."
 
 ;;;; Release
 
-(defun package-build-tag-version (rcp)
-  "Determine version corresponding to largest version tag for RCP.
-Return (COMMIT-HASH COMMITTER-DATE VERSION-STRING)."
+(defun package-build-get-tag-version (rcp)
   (let ((regexp (or (oref rcp version-regexp) package-build-version-regexp))
         (tag nil)
         (version '(0)))
-    (dolist (n (package-build--list-tags rcp))
+    (dolist (n (cl-etypecase rcp
+                 (package-git-recipe (process-lines "git" "tag" "--list"))
+                 (package-hg-recipe  (process-lines "hg" "tags" "--quiet"))))
       (let ((v (ignore-errors
                  (version-to-list (and (string-match regexp n)
                                        (match-string 1 n))))))
@@ -294,21 +268,9 @@ Return (COMMIT-HASH COMMITTER-DATE VERSION-STRING)."
          (pcase-let ((`(,hash ,time) (package-build--select-commit rcp tag t)))
            (list hash time (package-version-join version))))))
 
-(cl-defmethod package-build--list-tags ((_rcp package-git-recipe))
-  (process-lines "git" "tag" "--list"))
+;;;; Snapshot
 
-(cl-defmethod package-build--list-tags ((_rcp package-hg-recipe))
-  (process-lines "hg" "tags" "--quiet"))
-
-(define-obsolete-function-alias 'package-build-get-tag-version
-  'package-build-tag-version "Package-Build 5.0.0")
-
-;;;; Timestamp
-
-(defun package-build-timestamp-version (rcp)
-  "Determine timestamp version corresponding to latest relevant commit for RCP.
-Return (COMMIT-HASH COMMITTER-DATE VERSION-STRING), where
-VERSION-STRING has the format \"%Y%m%d.%H%M\"."
+(defun package-build-get-timestamp-version (rcp)
   (pcase-let ((`(,hash ,time) (package-build--get-timestamp-version rcp)))
     (list hash time
           ;; We remove zero-padding of the HH portion, as
@@ -324,7 +286,7 @@ VERSION-STRING has the format \"%Y%m%d.%H%M\"."
        (branch (and branch (concat "origin/" branch)))
        (rev (or commit branch "origin/HEAD"))
        (`(,rev-hash ,rev-time) (package-build--select-commit rcp rev commit))
-       (`(,tag-hash ,tag-time) (package-build-tag-version rcp)))
+       (`(,tag-hash ,tag-time) (package-build-get-tag-version rcp)))
     ;; If the latest commit that touches a relevant file is an ancestor of
     ;; the latest tagged release and the tag is reachable from origin/HEAD
     ;; (i.e., it isn't on a separate release branch) then use the tagged
@@ -340,14 +302,9 @@ VERSION-STRING has the format \"%Y%m%d.%H%M\"."
       (list rev-hash rev-time))))
 
 (cl-defmethod package-build--get-timestamp-version ((rcp package-hg-recipe))
-  (let* ((commit (oref rcp commit))
-         (branch (or (oref rcp branch) "default"))
-         (rev (format "sort(ancestors(%s), -rev)"
-                      (or commit (format "max(branch(%s))" branch)))))
-    (package-build--select-commit rcp rev nil)))
-
-(define-obsolete-function-alias 'package-build-get-snapshot-version
-  'package-build-snapshot-version "Package-Build 5.0.0")
+  ;; TODO Respect commit and branch properties.
+  ;; TODO Use latest release if appropriate.
+  (package-build--select-commit rcp "." nil))
 
 ;;; Run Process
 
@@ -403,7 +360,7 @@ with a timeout so that no command can block the build process."
       (unless package-build--inhibit-fetch
         (let ((default-directory dir))
           (package-build--message "Updating %s" dir)
-          (package-build--run-process "git" "fetch" "-f" "--tags" "origin")
+          (package-build--run-process "git" "fetch" "-f" "--all" "--tags")
           ;; We might later checkout "origin/HEAD". Sadly "git fetch"
           ;; cannot be told to keep it up-to-date, so we have to make
           ;; a second request.
@@ -420,7 +377,7 @@ with a timeout so that no command can block the build process."
                ;; that is known not to require a checkout and history.
                ;; See #52.
                (and (eq package-build-get-version-function
-                        #'package-build-tag-version)
+                        #'package-build-get-tag-version)
                     (list "--filter=blob:none" "--no-checkout"))))))))
 
 (cl-defmethod package-build--fetch ((rcp package-hg-recipe))
@@ -644,46 +601,31 @@ value specified in the file \"NAME.el\"."
          (version (oref rcp version))
          (commit (oref rcp commit))
          (file (concat name ".el"))
-         (file (or (car (rassoc file files)) file))
-         (maintainers nil))
+         (file (or (car (rassoc file files)) file)))
     (and (file-exists-p file)
          (with-temp-buffer
            (insert-file-contents file)
-           (setq maintainers
-                 (if (fboundp 'lm-maintainers)
-                     (lm-maintainers)
-                   (with-no-warnings
-                     (when-let ((maintainer (lm-maintainer)))
-                       (list maintainer)))))
            (package-desc-from-define
             name version
             (or (save-excursion
                   (goto-char (point-min))
-                  (and (re-search-forward "\
-^;;; [^ ]*\\.el ---[ \t]*\\(.*?\\)[ \t]*\\(-\\*-.*-\\*-[ \t]*\\)?$" nil t)
+                  (and (re-search-forward
+                        "^;;; [^ ]*\\.el ---[ \t]*\\(.*?\\)[ \t]*\\(-\\*-.*-\\*-[ \t]*\\)?$"
+                        nil t)
                        (match-string-no-properties 1)))
                 "No description available.")
             (when-let ((require-lines (lm-header-multiline "package-requires")))
               (package--prepare-dependencies
-               (package-read-from-string
-                (mapconcat #'identity require-lines " "))))
-            ;; `:kind' and `:archive' are handled separately.
+               (package-read-from-string (mapconcat #'identity require-lines " "))))
             :kind       (or kind 'single)
-            ;; The other keyword arguments are appended to the alist
-            ;; stored in the `extras' slot.  Make sure `:commit', which
-            ;; always exists and never has to be removed, comes first in
-            ;; the end result, so we can post-process the returned data
-            ;; by side-effect, e.g., to remove somewhat broken maintainer
-            ;; information, that cannot easily be encoded as json (see
-            ;; `package-build--archive-alist-for-json').
             :url        (lm-homepage)
             :keywords   (lm-keywords-list)
-            ;; Newer `package.el' versions support both `:maintainers' and
-            ;; `:maintainer', while older versions only support the latter.
-            :maintainer  (car maintainers)
-            :maintainers maintainers
-            :authors     (lm-authors)
-            :commit      commit)))))
+            :maintainer (if (fboundp 'lm-maintainers)
+                            (car (lm-maintainers))
+                          (with-no-warnings
+                            (lm-maintainer)))
+            :authors    (lm-authors)
+            :commit     commit)))))
 
 (defun package-build--desc-from-package (rcp files)
   "Return the package description for RCP.
@@ -964,8 +906,8 @@ in `package-build-archive-dir'."
               (package-build--build-single-file-package rcp files))
              (t
               (package-build--build-multi-file-package rcp files)))
-            (when package-build-write-badge-images
-              (package-build--write-badge-image
+            (when package-build-write-melpa-badge-images
+              (package-build--write-melpa-badge-image
                (oref rcp name) (oref rcp version) package-build-archive-dir))))
       (funcall package-build-cleanup-function rcp))))
 
@@ -1059,7 +1001,7 @@ packages for which that returns non-nil are build."
           (message "Building %i packages failed:\n%s"
                    (length failed)
                    (mapconcat (lambda (n) (concat "  " n)) (nreverse failed) "\n"))))))
-  (package-build-dump-archive-contents))
+  (package-build-cleanup))
 
 (defun package-build-cleanup ()
   "Remove previously built packages that no longer have recipes."
@@ -1079,54 +1021,36 @@ packages for which that returns non-nil are build."
 (defun package-build-dump-archive-contents (&optional file pretty-print)
   "Update and return the archive contents.
 
-Update files \"archive-contents\" and \"elpa-packages.eld\" in
-`package-build-archive-dir'.  If optional FILE is non-nil,
-use that to store the archive contents and place the second
-file next to it.
-
-If optional PRETTY-PRINT is non-nil, then pretty-print
-\"archive-contents\" instead of using one line per entry.
-\"elpa-packages.eld\" always uses one line per entry."
-  (let ((default-directory package-build-archive-dir)
-        (entries nil)
-        (vc-pkgs nil))
-    (dolist (file (sort (directory-files default-directory t ".*\\.entry\\'")
-                        ;; Sort more recently build packages first.
-                        #'file-newer-than-file-p))
+If non-nil, then store the archive contents in FILE instead of in
+the \"archive-contents\" file inside `package-build-archive-dir'.
+If PRETTY-PRINT is non-nil, then pretty-print instead of using one
+line per entry."
+  (let (entries)
+    (dolist (file (sort (directory-files package-build-archive-dir t ".*\\.entry$")
+                        ;; Sort more recently-build packages first
+                        (lambda (f1 f2)
+                          (let ((default-directory package-build-archive-dir))
+                            (file-newer-than-file-p f1 f2)))))
       (let* ((entry (with-temp-buffer
                       (insert-file-contents file)
                       (read (current-buffer))))
-             (symbol (car entry))
-             (name (symbol-name symbol))
-             (outdated (assq symbol entries)))
-        (cond
-         ((not (file-exists-p (expand-file-name name package-build-recipes-dir)))
-          ;; Recipe corresponding to this entry no longer exists.
-          (package-build--remove-archive-files entry))
-         (outdated
-          ;; Prefer the more recently built package, which may not
-          ;; necessarily have the highest version number, e.g., if
+             (name (car entry))
+             (newer-entry (assq name entries)))
+        (if (not (file-exists-p (expand-file-name (symbol-name name)
+                                                  package-build-recipes-dir)))
+            (package-build--remove-archive-files entry)
+          ;; Prefer the more-recently-built package, which may not
+          ;; necessarily have the highest version number, e.g. if
           ;; commit histories were changed.
-          (package-build--remove-archive-files entry))
-         (t
-          (push entry entries)
-          ;; [Non]GNU ELPA recipes are not compatible with Melpa recipes.
-          ;; See around occurrences of "pkg-spec" in "package-vc.el";
-          ;; section "Specifications (elpa-packages)" in "README" of the
-          ;; "elpa-admin" branch in "emacs/elpa.git" repository; and also
-          ;; `elpaa--supported-keywords' and `elpaa--publish-package-spec'.
-          (let ((recipe (package-recipe-lookup name)))
-            (push
-             `(,symbol
-               :url ,(package-recipe--upstream-url recipe)
-               ,@(and (cl-typep recipe 'package-hg-recipe)
-                      (list :vc-backend 'Hg))
-               ,@(when-let* ((branch (oref recipe branch)))
-                   (list :branch branch)))
-             vc-pkgs))))))
-    (setq entries (cl-sort entries #'string<
-                           :key (lambda (e) (symbol-name (car e)))))
-    (with-temp-file (or file (expand-file-name "archive-contents"))
+          (if newer-entry
+              (package-build--remove-archive-files entry)
+            (push entry entries)))))
+    (setq entries (sort entries (lambda (a b)
+                                  (string< (symbol-name (car a))
+                                           (symbol-name (car b))))))
+    (with-temp-file
+        (or file
+            (expand-file-name "archive-contents" package-build-archive-dir))
       (let ((print-level nil)
             (print-length nil))
         (if pretty-print
@@ -1136,18 +1060,7 @@ If optional PRETTY-PRINT is non-nil, then pretty-print
             (newline)
             (insert " ")
             (prin1 entry (current-buffer)))
-          (insert ")\n"))))
-    (with-temp-file (expand-file-name "elpa-packages.eld"
-                                      (and file (file-name-nondirectory file)))
-      (let ((print-level nil)
-            (print-length nil))
-        (insert "((")
-        (prin1 (car vc-pkgs) (current-buffer))
-        (dolist (entry (cdr vc-pkgs))
-          (newline)
-          (insert "  ")
-          (prin1 entry (current-buffer)))
-        (insert ")\n :version 1 :default-vc Git)\n")))
+          (insert ")"))))
     entries))
 
 (defun package-build--remove-archive-files (archive-entry)
@@ -1231,24 +1144,15 @@ a package."
                        (let* ((info (cdr entry))
                               (extra (aref info 4))
                               (maintainer (assq :maintainer extra))
-                              (maintainers (assq :maintainers extra))
                               (authors (assq :authors extra)))
                          (when maintainer
                            (setcdr maintainer
                                    (format-person (cdr maintainer))))
-                         (when maintainers
-                           (if (cl-every #'listp (cdr maintainers))
-                               (setcdr maintainers
-                                       (mapcar #'format-person
-                                               (cdr maintainers)))
-                             (setq maintainers ; silence >= 30 compiler
-                                   (assq-delete-all :maintainers extra))))
                          (when authors
                            (if (cl-every #'listp (cdr authors))
                                (setcdr authors
                                        (mapcar #'format-person (cdr authors)))
-                             (setq authors ; silence >= 30 compiler
-                                   (assq-delete-all :authors extra))))
+                             (assq-delete-all :authors extra)))
                          (package-build--pkg-info-for-json info))))
                (package-build-archive-alist))))
 
