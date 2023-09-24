@@ -38,6 +38,12 @@ jobs:
         nix run github:emacs-twist/recipes-updater/remain-on-tmp-branch#forceUpdate \
           --no-write-lock-file -- upstream/master
 
+    # A workaround to prevent peter-evans/create-pull-request from resetting the
+    # head here:
+    # <https://github.com/peter-evans/create-pull-request/blob/d806186ee3288c60a352af9852b6b18afbbfd87e/src/create-or-update-branch.ts#L178>
+    - name: Detach the head
+      run: git switch --detach `git rev-parse HEAD`
+
     - name: Create a pull request
       uses: peter-evans/create-pull-request@v5
       with:
