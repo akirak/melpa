@@ -35,7 +35,8 @@ jobs:
         # unused
         git config --add user.name 'github-actions[bot]'
         git config --add user.email '6270544+github-actions[bot]@users.noreply.github.com'
-        nix run .#update-recipes --no-write-lock-file -- upstream/master
+        nix run github:emacs-twist/recipes-updater#forceUpdate \
+          --no-write-lock-file -- upstream/master
 
     # A workaround to prevent peter-evans/create-pull-request from resetting the
     # head here:
