@@ -1,0 +1,2 @@
+(acm :fetcher github :repo "manateelazycat/lsp-bridge"
+     :files ("acm/*.el" "acm/icons"))
