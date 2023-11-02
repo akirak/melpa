@@ -37,6 +37,7 @@ jobs:
         git config --add user.email '6270544+github-actions[bot]@users.noreply.github.com'
         nix run github:emacs-twist/recipes-updater/remain-on-tmp-branch#forceUpdate \
           --no-write-lock-file -- upstream/master
+        git rebase akirak
 
     # A workaround to prevent peter-evans/create-pull-request from resetting the
     # head here:
