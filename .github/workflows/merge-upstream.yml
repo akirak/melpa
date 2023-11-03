@@ -64,14 +64,10 @@ jobs:
             commit.committer_date = commit.author_date
           ' --force
 
-    - name: Rebase
-      run: |
-        git rebase -s ort -X ours ${{ steps.start.outputs.rev }}
-
-    - name: Merge into the original branch
+    - name: Cherry-pick the filtered commits
       run: |
         git switch ${{ matrix.base_ref }}
-        git merge --ff upstream-recipes
+        git cherry-pick --strategy ort -X theirs ..upstream-recipes
 
     - name: Create a pull request
       uses: peter-evans/create-pull-request@v5
