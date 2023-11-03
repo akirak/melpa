@@ -31,14 +31,14 @@ jobs:
       run: |
         echo "rev=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
+    - name: Install git-filter-repo
+      run: |
+        sudo apt-get update && sudo apt-get install git-filter-repo --yes
+
     - name: Fetch the upstream
       run: |
         git remote add upstream ${{ matrix.upstream }}
         git fetch upstream ${{ matrix.upstream_branch }}
-
-    - uses: DeterminateSystems/nix-installer-action@v4
-      with:
-        diagnostic-endpoint: ''
 
     - name: Configure the Git identity
       run: |
@@ -56,7 +56,7 @@ jobs:
     - name: Filter commits
       run: |
         git switch -C upstream-recipes upstream/${{ matrix.upstream_branch }}
-        nix run nixpkgs#git-filter-repo -- \
+        git-filter-repo \
           --path recipes/ --refs "${{ steps.merge-base.outputs.rev }}..HEAD" \
           --commit-callback '
             commit.committer_name = commit.author_name
