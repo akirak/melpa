@@ -6,8 +6,17 @@ on:
     - cron: '0 8 * * 5'
 
 jobs:
-  push:
+  pr:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        base_ref:
+          - akirak
+        upstream:
+          - 'https://github.com/melpa/melpa.git'
+        upstream_branch:
+          - 'master'
 
     steps:
 
@@ -15,7 +24,7 @@ jobs:
       with:
         fetch-depth: 0
         sparse-checkout: '.'
-        ref: akirak
+        ref: ${{ matrix.base_ref }}
 
     - name: Switch to a work branch
       id: start
@@ -23,11 +32,9 @@ jobs:
         echo "rev=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
     - name: Fetch the upstream
-      id: upstream
       run: |
-        git remote add upstream https://github.com/melpa/melpa.git
-        git fetch upstream master
-        echo "ref=upstream/master" >> "$GITHUB_OUTPUT"
+        git remote add upstream ${{ matrix.upstream }}
+        git fetch upstream ${{ matrix.upstream_branch }}
 
     - uses: DeterminateSystems/nix-installer-action@v4
       with:
@@ -43,12 +50,12 @@ jobs:
     - name: Retrieve the merge base
       id: merge-base
       run: |
-        rev=$(git merge-base ${{ steps.upstream.outputs.ref }} ${{ steps.start.outputs.rev }})
+        rev=$(git merge-base upstream/${{ matrix.upstream_branch }} ${{ matrix.base_ref }})
         echo "rev=$rev" > "$GITHUB_OUTPUT"
 
     - name: Filter commits
       run: |
-        git switch -C upstream-recipes ${{ steps.upstream.outputs.ref }}
+        git switch -C upstream-recipes upstream/${{ matrix.upstream_branch }}
         nix run nixpkgs#git-filter-repo -- \
           --path recipes/ --refs "${{ steps.merge-base.outputs.rev }}..HEAD" \
           --commit-callback '
@@ -61,21 +68,10 @@ jobs:
       run: |
         git rebase -s ort -X ours ${{ steps.start.outputs.rev }}
 
-    - run: git push --force-with-lease origin HEAD
-
-  pr:
-    runs-on: ubuntu-latest
-
-    needs:
-    - push
-
-    steps:
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-        ref: akirak
-
-    - run: git merge --ff origin/upstream-recipes
+    - name: Merge into the original branch
+      run: |
+        git switch ${{ matrix.base_ref }}
+        git merge --ff upstream-recipes
 
     - name: Create a pull request
       uses: peter-evans/create-pull-request@v5
