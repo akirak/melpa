@@ -1,0 +1,44 @@
+name: Rebase onto upstream
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 8 * * 5'
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        base_ref:
+          - akirak
+          # - admin
+        upstream_branch:
+          - 'master'
+
+    steps:
+
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        ref: ${{ matrix.base_ref }}
+
+    - name: Fetch the upstream
+      run: |
+        git remote add upstream https://github.com/melpa/melpa.git
+        git fetch upstream ${{ matrix.upstream_branch }}
+
+    - name: Cherry pick commits
+      run: |
+        git config --add user.name 'github-actions[bot]'
+        git config --add user.email '6270544+github-actions[bot]@users.noreply.github.com'
+        git rebase -s ort -X theirs upstream/${{ matrix.upstream_branch }}
+
+    - uses: peter-evans/create-pull-request@v5
+      with:
+        base: ${{ matrix.base_ref }}
+        title: 'Rebase onto upstream'
+        branch: 'rebase-${{ matrix.base_ref }}'
+        labels: automation
+        token: ${{ secrets.PAT_FOR_PR }}
