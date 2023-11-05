@@ -1,0 +1,48 @@
+name: Reset on merge
+
+on:
+  pull_request:
+    types:
+    - closed
+
+jobs:
+  reset:
+
+    if: |
+      github.event.pull_request.merged == true &&
+      github.base_ref == 'akirak' &&
+      github.head_ref == 'rebase-akirak' &&
+      github.event.pull_request.head.repo.id == github.event.pull_request.base.repo.id
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.base_ref }}
+
+    - name: Tag the last head revision
+      id: backup
+      run: |
+        tag="${{ github.base_ref }}-backup-$(date +'%Y%m%d%H%M%S')"
+        git tag "$tag" "$(git rev-parse HEAD~1)"
+        echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+    - name: Push the tag
+      uses: ad-m/github-push-action@master
+      with:
+        tags: true
+        branch: ${{ steps.backup.outputs.tag }}
+
+    - name: Reset
+      run: |
+        git reset --hard "$rev"
+      env:
+        rev: ${{ github.head_ref }}
+
+    - name: Push the resetted branch
+      uses: ad-m/github-push-action@master
+      with:
+        branch: ${{ github.base_ref }}
+        force: true
