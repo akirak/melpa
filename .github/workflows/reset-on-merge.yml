@@ -38,6 +38,7 @@ jobs:
 
     - name: Reset
       run: |
+        git fetch origin "$rev"
         git reset --hard "$rev"
       env:
         rev: ${{ github.head_ref }}
