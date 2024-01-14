@@ -1,1 +1,1 @@
-(oahu :fetcher sourcehut :repo "akirak/oahu.el")
+(oahu :fetcher github :repo "akirak/oahu.el")
