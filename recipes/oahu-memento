@@ -1,2 +1,2 @@
-(oahu-memento :fetcher sourcehut :repo "akirak/oahu.el"
+(oahu-memento :fetcher github :repo "akirak/oahu.el"
               :files ("extra/oahu-memento.el"))
