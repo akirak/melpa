@@ -1,0 +1,2 @@
+(akirak :fetcher github :repo "akirak/emacs-config"
+        :files ("emacs/lisp/*.el"))

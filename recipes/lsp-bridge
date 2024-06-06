@@ -1,0 +1,11 @@
+;; This recipe was taken from https://github.com/akirak/nixpkgs/blob/a790cc526b488cf5d9966e9a45d2f4d2a92963a5/pkgs/applications/editors/emacs/elisp-packages/manual-packages/lsp-bridge/default.nix
+(lsp-bridge
+ :repo "manateelazycat/lsp-bridge"
+ :fetcher github
+ :files
+ ("*.el"
+  "lsp_bridge.py"
+  "core"
+  "langserver"
+  "multiserver"
+  "resources"))
