@@ -1,2 +1,3 @@
 (gleam-ts-mode :fetcher github :repo "gleam-lang/gleam-mode"
+               :files ("gleam-ts-mode.el")
                :branch "gleam-ts-mode")
